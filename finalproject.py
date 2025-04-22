@@ -14,7 +14,6 @@ import numpy as np
 
 sns.set_theme(style="whitegrid")
 
-
 # [DA1] Clean or manipulate data, lambda function (required)
 def clean_data():
     df = pd.read_csv("fast_food_usa.csv")
@@ -25,9 +24,7 @@ def clean_data():
     df['numbered_categories'] = df['categories'].apply(lambda x: len(x.split(',')))
     return df
 
-
 data = clean_data()
-
 
 # [PY2] A function that returns more than one value
 def get_list(df):
@@ -35,9 +32,7 @@ def get_list(df):
     states = ['All'] + sorted(df['province'].unique())
     return cities, states
 
-
 cities, states = get_list(data)
-
 
 # [PY1] A function with two or more parameters, one of which has a default value, called at least twice (once with the default value, and once without)
 def filter_data(df, city="All", state="All"):
@@ -50,20 +45,20 @@ def filter_data(df, city="All", state="All"):
     else:
         return df
 
-
 # [PY1] A function with two or more parameters, one of which has a default value, called at least twice (once with the default value, and once without)
 default = filter_data(data)
 custom = filter_data(data, city="Boston", state="MA")
 
 # [PY4] A list comprehension
 all_categories = ['All'] + sorted({category for categories in data['categories'] for category in categories.split(',')})
+
 # [PY5] At least three Streamlit different widgets  (sliders, drop-downs, multi-selects, text boxes, etc)
 name_count = data['name'].value_counts().to_dict()
+
 # [ST4] Customized page design features (sidebar, fonts, colors, images, navigation)
 st.title("Fast Food USA Explorer")
 st.sidebar.header("Fast Food Explorer")
-st.sidebar.image("https://www.partstown.com/about-us/wp-content/uploads/2023/11/what-is-considered-fast-food.jpg",
-                 width=100)
+st.sidebar.image("https://www.partstown.com/about-us/wp-content/uploads/2023/11/what-is-considered-fast-food.jpg", width=100)
 
 page = st.sidebar.radio("What would you like to explore?", [
     "Find Restaurants by Location",
@@ -75,7 +70,7 @@ page = st.sidebar.radio("What would you like to explore?", [
 if page == "Find Restaurants by Location":
     st.header("Find Restaurants by Location")
     st.write(
-        "This page will show all restaurants in the area that you choose. To navigate this page, select the cityand/or state that you would like to see results from. Enter 'All' for all cities and/or state data in the entire country.")
+        "This page will show all restaurants in the area that you choose. To navigate this page, select the city and/or state that you would like to see results from. Enter 'All' for all cities and/or state data in the entire country.")
     # [ST1] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
     city = st.selectbox("Enter City: ", cities)
     state = st.selectbox("Enter State: ", states)
@@ -86,10 +81,11 @@ if page == "Find Restaurants by Location":
             st.stop()
         location_count['latitude'] = location_count['latitude'].astype(float)
         location_count['longitude'] = location_count['longitude'].astype(float)
+        st.dataframe(location_count[['name', 'city', 'province']])
     except Exception as e:
         st.error(f"Error Loading Data: {e}")
         st.stop()
-    st.dataframe(location_count[['name', 'city', 'province']])
+
     # [DA4] Filter data by one condition
     st.subheader("Map of Locations")
     try:
@@ -104,7 +100,7 @@ if page == "Find Restaurants by Location":
                 pdk.Layer(
                     'ScatterplotLayer',
                     data=location_count,
-                    get_position='[longitude, latitude]',
+                    get_position='[longitude, latitude]',  # FIX: longitude first!
                     get_color=[255, 192, 203, 160],
                     get_radius=1000,
                     pickable=True,
@@ -114,6 +110,7 @@ if page == "Find Restaurants by Location":
         ))
     except Exception as e:
         st.error(f"Map Error: {e}")
+
     # [EXTRA][FOLIUM1] 3 additional DA requirements
     st.subheader("Folium Map of Locations")
     try:
@@ -121,10 +118,11 @@ if page == "Find Restaurants by Location":
         for idx, row in location_count.iterrows():
             folium.Marker([row['latitude'], row['longitude']], tooltip=row['name']).add_to(m)
         st_folium(m, width=700, height=400)
-    except:
-        st.error(f"Foluim map error: {e}")
-elif page == "Number of Restaurants by Location:":
-    st.header("Number of Restaurant by Location")
+    except Exception as e:
+        st.error(f"Folium map error: {e}")
+
+elif page == "Number of Restaurants by Location":
+    st.header("Number of Restaurants by Location")
     # [ST2] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
     name = st.selectbox("Choose a Restaurant", ["All"] + sorted(data['name'].unique()))
     state = st.selectbox("Choose State:", states)
@@ -153,8 +151,8 @@ elif page == "Number of Restaurants by Location:":
     else:
         st.write("Please choose a Restaurant.")
 
-elif page == "Restaurant Types by Location":
-    st.header("Restaurant Types by Location")
+elif page == "Restaurant Summary by Location":
+    st.header("Restaurant Summary by Location")
     # [ST3] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
     city = st.selectbox("Choose a City:", cities)
     state = st.selectbox("Choose a State", states)
@@ -163,7 +161,6 @@ elif page == "Restaurant Types by Location":
     st.write(f"Number of Restaurants: {len(filtered_data)}")
     st.dataframe(filtered_data[['name', 'city', 'province']])
     # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
-    st.subheader("Restaurant Count by City:")
     city_counts = data['city'].value_counts().head(10)
     fig2, ax2 = plt.subplots()
     city_counts.plot(kind="bar", ax=ax2, color="skyblue")
@@ -176,11 +173,12 @@ elif page == "Restaurant Types by Location":
     st.subheader("Seaborn Countplot")
     if not filtered_data.empty:
         fig4, ax4 = plt.subplots()
-        top_categories = city_counts.head().index.tolist()
-        sns.countplot(y='categories',
-                      data=filtered_data[filtered_data['categories'].isin(top_categories)],
-                      order=top_categories, ax=ax4)
-        ax4.set_title("Top Categories")
+        # FIX: Use 'city' for countplot, not 'categories'
+        top_cities = city_counts.head().index.tolist()
+        sns.countplot(y='city',
+                      data=filtered_data[filtered_data['city'].isin(top_cities)],
+                      order=top_cities, ax=ax4)
+        ax4.set_title("Top Cities")
         st.pyplot(fig4)
 
 elif page == "Summary & Analytics":
@@ -213,10 +211,9 @@ elif page == "Summary & Analytics":
         st.write(f"{idx}: {row['name']} in {row['city']}, {row['province']}")
     # [PY5] A dictionary where you write code to access its keys, values, or items
     st.write("Restaurant Dictionary Keys:", list(name_count.keys())[:5])
-    st.subheader("Folium Heatmap of all Locations")
     # [EXTRA][FOLIUM2] Maps made with Folium
+    st.subheader("Folium Heatmap of all Locations")
     from folium.plugins import HeatMap
-
     m2 = folium.Map(location=[data['latitude'].mean(), data['longitude'].mean()])
     HeatMap(data[['latitude', 'longitude']].dropna().values.tolist()).add_to(m2)
     st_folium(m2, width=700, height=400)
