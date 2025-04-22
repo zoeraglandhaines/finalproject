@@ -1,0 +1,8 @@
+streamlit
+matplotlib>=3.0.0
+pandas
+numpy
+pydeck
+seaborn
+folium
+streamlit-folium
