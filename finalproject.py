@@ -1,7 +1,9 @@
 """
-Name:
-Class:
+Name: Zoe Ragland-Haines
+Class: CS230
 Professor Frydenberg
+URL:
+Info: This app runs various equations to find different analytics about fast food restaurants
 """
 import streamlit as st
 import pandas as pd
@@ -135,7 +137,7 @@ elif page == "Number of Restaurants by Location":
         st.write(f"Total {name} locations: {count.sum()}")
         # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
         fig, ax = plt.subplots()
-        count.plot(kind="bar", color="red", ax=ax)
+        count.plot(kind="bar", color="blue", ax=ax)
         ax.set_title(f"{name} Locations by State")
         ax.set_xlabel("State")
         ax.set_ylabel("Number of Locations")
@@ -153,7 +155,7 @@ elif page == "Number of Restaurants by Location":
 
 elif page == "Restaurant Summary by Location":
     st.header("Restaurant Summary by Location")
-    # [ST3] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
+    # [ST3] At least three Streamlit different widgets  (sliders, drop-downs, multi-selects, text boxes, etc)
     city = st.selectbox("Choose a City:", cities)
     state = st.selectbox("Choose a State", states)
     # [DA4] Filter data by one condition
@@ -163,7 +165,7 @@ elif page == "Restaurant Summary by Location":
     # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
     city_counts = data['city'].value_counts().head(10)
     fig2, ax2 = plt.subplots()
-    city_counts.plot(kind="bar", ax=ax2, color="skyblue")
+    city_counts.plot(kind="bar", ax=ax2, color="purple")
     ax2.set_title("Top 10 Cities by Number of Restaurants")
     ax2.set_xlabel("City")
     ax2.set_ylabel("Number of Restaurants")
