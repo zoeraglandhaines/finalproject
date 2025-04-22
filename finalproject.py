@@ -8,9 +8,9 @@ Info: This app runs various equations to find different analytics about fast foo
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns  # [EXTRA] 2 Seaborn charts  [SEA1], [SEA2]
+import seaborn as sns  # [EXTRA] 2 Seaborn charts [SEA1], [SEA2]
 import pydeck as pdk
-import folium  # [EXTRA][FOLIUM1][FOLIUM2] 2 maps using different features of Folium Maps
+import folium  # [EXTRA][FOLIUM1][FOLIUM2]
 from streamlit_folium import st_folium
 import numpy as np
 
@@ -47,14 +47,13 @@ def filter_data(df, city="All", state="All"):
     else:
         return df
 
-# [PY1] A function with two or more parameters, one of which has a default value, called at least twice (once with the default value, and once without)
-default = filter_data(data)
-custom = filter_data(data, city="Boston", state="MA")
+default = filter_data(data)  # [PY1] called with default
+custom = filter_data(data, city="Boston", state="MA")  # [PY1] called with custom args
 
 # [PY4] A list comprehension
 all_categories = ['All'] + sorted({category for categories in data['categories'] for category in categories.split(',')})
 
-# [PY5] At least three Streamlit different widgets  (sliders, drop-downs, multi-selects, text boxes, etc)
+# [PY5] A dictionary where you write code to access its keys, values, or items
 name_count = data['name'].value_counts().to_dict()
 
 # [ST4] Customized page design features (sidebar, fonts, colors, images, navigation)
@@ -73,7 +72,7 @@ if page == "Find Restaurants by Location":
     st.header("Find Restaurants by Location")
     st.write(
         "This page will show all restaurants in the area that you choose. To navigate this page, select the city and/or state that you would like to see results from. Enter 'All' for all cities and/or state data in the entire country.")
-    # [ST1] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
+    # [ST1] At least three Streamlit different widgets (sliders, drop downs, multi-selects, text boxes, etc)
     city = st.selectbox("Enter City: ", cities)
     state = st.selectbox("Enter State: ", states)
     try:
@@ -88,74 +87,130 @@ if page == "Find Restaurants by Location":
         st.error(f"Error Loading Data: {e}")
         st.stop()
 
-    # [DA4] Filter data by one condition
-    st.subheader("Map of Locations")
-    try:
-        st.pydeck_chart(pdk.Deck(
-            map_style='mapbox://styles/mapbox/standard-satellite',
-            initial_view_state=pdk.ViewState(
-                latitude=location_count['latitude'].mean(),
-                longitude=location_count['longitude'].mean(),
-                zoom=4
-            ),
-            layers=[
-                pdk.Layer(
-                    'ScatterplotLayer',
-                    data=location_count,
-                    get_position='[longitude, latitude]',  # FIX: longitude first!
-                    get_color=[255, 192, 203, 160],
-                    get_radius=1000,
-                    pickable=True,
-                ),
-            ],
-            tooltip={"text": "{name}\n{city}, {province}"}
-        ))
-    except Exception as e:
-        st.error(f"Map Error: {e}")
-
     # [EXTRA][FOLIUM1] 3 additional DA requirements
     st.subheader("Folium Map of Locations")
     try:
-        m = folium.Map(location=[location_count['latitude'].mean(), location_count['longitude'].mean()])
-        for idx, row in location_count.iterrows():
-            folium.Marker([row['latitude'], row['longitude']], tooltip=row['name']).add_to(m)
-        st_folium(m, width=700, height=400)
+        if location_count.empty or 'latitude' not in location_count.columns or 'longitude' not in location_count.columns:
+            st.warning("No valid location data to display for this selection.")
+        else:
+            m = folium.Map(location=[location_count['latitude'].mean(), location_count['longitude'].mean()])
+            for idx, row in location_count.iterrows():
+                folium.Marker([row['latitude'], row['longitude']], tooltip=row['name']).add_to(m)
+            st_folium(m, width=700, height=400)
     except Exception as e:
         st.error(f"Folium map error: {e}")
 
 elif page == "Number of Restaurants by Location":
     st.header("Number of Restaurants by Location")
-    # [ST2] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
+    # [ST2] At least three Streamlit different widgets (sliders, drop downs, multi-selects, text boxes, etc)
     name = st.selectbox("Choose a Restaurant", ["All"] + sorted(data['name'].unique()))
     state = st.selectbox("Choose State:", states)
-    # [DA5] Filter data by two or more conditions with AND or OR
-    if name != "All" and state != "All":
-        count = len(data[(data['name'] == name) & (data['province'] == state)])
-        st.write(f"Total {name} locations in {state}: {count}")
-    elif name != "All":
-        count = data[data['name'] == name]['province'].value_counts()
-        st.write(f"Total {name} locations: {count.sum()}")
-        # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
-        fig, ax = plt.subplots()
-        count.plot(kind="bar", color="blue", ax=ax)
-        ax.set_title(f"{name} Locations by State")
-        ax.set_xlabel("State")
-        ax.set_ylabel("Number of Locations")
-        st.pyplot(fig)
-        # [EXTRA][SEA1] 2 Seaborn charts
-        st.subheader("Seaborn Barplot")
-        fig3, ax3 = plt.subplots()
-        sns.barplot(x=count.index, y=count.values, ax=ax3)
-        ax3.set_title(f"{name} Locations by State")
-        ax3.set_xlabel("State")
-        ax3.set_ylabel("Number of Locations")
-        st.pyplot(fig3)
-    else:
-        st.write("Please choose a Restaurant.")
+    city = st.selectbox("Choose City:", cities)
 
+    filtered = filter_data(data, city, state)
+    if name != "All":
+        filtered = filtered[filtered['name'] == name]
+
+    if filtered.empty:
+        st.warning("No data to display.")
+    else:
+        #all restaurants
+        if name != "All":
+            #specific restaurant & city
+            if state != "All" or city != "All":
+                count = len(filtered)
+                location_info = []
+                if city != "All": location_info.append(city)
+                if state != "All": location_info.append(state)
+                location_str = ", ".join(location_info)
+                st.write(f"Total {name} locations in {location_str}: {count}")
+            #specific restaurant, all cities
+            else:
+                count = filtered['province'].value_counts()
+                st.write(f"Total {name} locations: {count.sum()}")
+                # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
+                fig, ax = plt.subplots()
+                count.plot(kind="bar", color="skyblue", ax=ax)
+                ax.set_title(f"{name} Locations by State")
+                ax.set_xlabel("State")
+                ax.set_ylabel("Number of Locations")
+                st.pyplot(fig)
+                # [EXTRA][SEA1] 2 Seaborn charts
+                st.subheader("Seaborn Barplot")
+                fig3, ax3 = plt.subplots()
+                sns.barplot(x=count.index, y=count.values, ax=ax3)
+                ax3.set_title(f"{name} Locations by State")
+                ax3.set_xlabel("State")
+                ax3.set_ylabel("Number of Locations")
+                st.pyplot(fig3)
+        # all restaurants
+        else:
+            #all restaurants, states
+            if state == "All" and city != "All":
+                count_by_state = filtered.groupby('province')['name'].count().sort_values(ascending=False)
+                st.write(f"Number of Restaurants by State for {city}")
+                #matplot bar chart for states
+                fig, ax = plt.subplots()
+                count_by_state.plot(kind="bar", color="blue", ax=ax)
+                ax.set_title(f"Number of Restaurants by State for {city}")
+                ax.set_xlabel("State")
+                ax.set_ylabel("Number of Restaurants")
+                st.pyplot(fig)
+                #seaborn barplot for states
+                st.subheader("Seaborn Barplot")
+                fig3, ax3 = plt.subplots()
+                sns.barplot(x=count_by_state.index, y=count_by_state.values, ax=ax3, palette="pastel")
+                ax3.set_title(f"Number of Restaurants by State for {city}")
+                ax3.set_xlabel("State")
+                ax3.set_ylabel("Number of Restaurants")
+                st.pyplot(fig3)
+            # all restaurants, cities, specific states
+            elif state != "All" and city == "All":
+                count_by_city = filtered.groupby('city')['name'].count().sort_values(ascending=False)
+                st.write(f"Number of Restaurants by City in {state}")
+                #matplotlib bar chart for cities
+                fig, ax = plt.subplots()
+                count_by_city.head(10).plot(kind="bar", color="pink", ax=ax)
+                ax.set_title(f"Top 10 Cities by Number of Restaurants in {state}")
+                ax.set_xlabel("City")
+                ax.set_ylabel("Number of Restaurants")
+                st.pyplot(fig)
+                #seaborn barplot for cities
+                st.subheader("Seaborn Barplot")
+                fig3, ax3 = plt.subplots()
+                sns.barplot(x=count_by_city.head(10).index, y=count_by_city.head(10).values, ax=ax3, palette="pastel")
+                ax3.set_title(f"Top 10 Cities by Number of Restaurants in {state}")
+                ax3.set_xlabel("City")
+                ax3.set_ylabel("Number of Restaurants")
+                plt.xticks(rotation=45)
+                st.pyplot(fig3)
+            #all restaurants, specific state, city
+            elif state != "All" and city != "All":
+                count = len(filtered)
+                st.write(f"Number of restaurants in {city}, {state}: {count}")
+                st.metric("Restaurant Count:", count)
+            #all restaurants, states, cities
+            else:
+                count_by_state = filtered.groupby('province')['name'].count().sort_values(ascending=False)
+                st.write("Number of Restaurants by State")
+                #matplotlib bar chart for states
+                fig, ax = plt.subplots()
+                count_by_state.head(10).plot(kind="bar", color="palegreen", ax=ax)
+                ax.set_title("Top 10 States by Number of Restaurants")
+                ax.set_xlabel("State")
+                ax.set_ylabel("Number of Restaurants")
+                st.pyplot(fig)
+                #seaborn barplot for states
+                st.subheader("Seaborn Barplot")
+                fig3, ax3 = plt.subplots()
+                sns.barplot(x=count_by_state.head(10).index, y=count_by_state.head(10).values, ax=ax3, palette="pastel")
+                ax3.set_title("Top 10 States by Number of Restaurants")
+                ax3.set_xlabel("State")
+                ax3.set_ylabel("Number of Restaurants")
+                st.pyplot(fig3)
 elif page == "Restaurant Summary by Location":
     st.header("Restaurant Summary by Location")
-    # [ST3] At least three Streamlit different widgets  (sliders, drop-downs, multi-selects, text boxes, etc)
+    # [ST3] At least three Streamlit different widgets  (sliders, drop downs, multi-selects, text boxes, etc)
     city = st.selectbox("Choose a City:", cities)
     state = st.selectbox("Choose a State", states)
     # [DA4] Filter data by one condition
@@ -165,7 +220,7 @@ elif page == "Restaurant Summary by Location":
     # [CHART2] At least two different charts with matplotlib, including titles, colors, labels, legends, as appropriate, one can be a table
     city_counts = data['city'].value_counts().head(10)
     fig2, ax2 = plt.subplots()
-    city_counts.plot(kind="bar", ax=ax2, color="purple")
+    city_counts.plot(kind="bar", ax=ax2, color="thistle")
     ax2.set_title("Top 10 Cities by Number of Restaurants")
     ax2.set_xlabel("City")
     ax2.set_ylabel("Number of Restaurants")
@@ -175,7 +230,6 @@ elif page == "Restaurant Summary by Location":
     st.subheader("Seaborn Countplot")
     if not filtered_data.empty:
         fig4, ax4 = plt.subplots()
-        # FIX: Use 'city' for countplot, not 'categories'
         top_cities = city_counts.head().index.tolist()
         sns.countplot(y='city',
                       data=filtered_data[filtered_data['city'].isin(top_cities)],
